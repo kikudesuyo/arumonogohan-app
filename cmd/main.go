@@ -10,6 +10,8 @@ import (
 	"github.com/kikudesuyo/arumonogohan-app/api/handler"
 )
 
+var store = &entity.LineSessionStore{}
+
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
 		fmt.Println("No .env file found")
@@ -21,7 +23,7 @@ func main() {
 }
 
 func postCallback(c *gin.Context) {
-	lineBot, err := entity.NewLineBotClient()
+	lineBot, err := entity.NewLineBotClient(store)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -31,23 +33,66 @@ func postCallback(c *gin.Context) {
 		fmt.Println(err.Error())
 		return
 	}
-
-	clientMessage, err := lineBot.GetMessage(events)
+	lineBot.SaveMessageToStore(events)
+	userID, err := lineBot.GetUserID(events)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-
-	//clientMessageの内容に応じて該当するhandlerを呼び出す
-	var replyMessage string
-	if clientMessage == "" {
+	d, err := store.Get(userID)
+	if err != nil {
+		fmt.Println(err.Error())
 		return
-	} else if clientMessage != "" { // 現在は文字列があればレシピを提案
-		replyMessage, err = handler.HandleSuggestRecipe(clientMessage)
+	}
+	messages := d.Messages
+	fmt.Println(messages)
+	var menus = []string{
+		"時短メニュー⏱️",
+		"家庭の味🥢",
+		"さっぱりヘルシー🥗",
+		"ガッツリメニュー🍖",
+	}
+	if len(messages) == 1 {
+		for _, menu := range menus {
+			if menu == messages[len(messages)-1] {
+				replyMessage := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", menu)
+				err = lineBot.ReplyMessage(events, replyMessage)
+				if err != nil {
+					fmt.Println(err.Error())
+					return
+				}
+			}
+		}
+		replyMessage := "メニューを選んでください🍽️"
+		err = lineBot.ReplyMessage(events, replyMessage)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
+		return
+	}
+	var replyMessage string
+	for _, menu := range menus {
+		if menu == messages[len(messages)-1] {
+			replyMessage := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", menu)
+			err = lineBot.ReplyMessage(events, replyMessage)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+		}
+	}
+	for _, menu := range menus {
+		if menu == messages[len(messages)-2] {
+			replyMessage, err = handler.HandleSuggestRecipe(messages[len(messages)-1])
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+		}
+	}
+	if replyMessage == "" {
+		replyMessage = "メニューを選んでください🍽️"
 	}
 	err = lineBot.ReplyMessage(events, replyMessage)
 	if err != nil {

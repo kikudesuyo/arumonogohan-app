@@ -8,10 +8,11 @@ import (
 )
 
 type LineBotClient struct {
-	Bot *linebot.Client
+	Bot   *linebot.Client
+	Store *LineSessionStore
 }
 
-func NewLineBotClient() (*LineBotClient, error) {
+func NewLineBotClient(store *LineSessionStore) (*LineBotClient, error) {
 	bot, err := linebot.New(
 		os.Getenv("LINE_BOT_CHANNEL_SECRET"),
 		os.Getenv("LINE_BOT_CHANNEL_TOKEN"),
@@ -19,7 +20,7 @@ func NewLineBotClient() (*LineBotClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating LINE bot client: %v", err)
 	}
-	return &LineBotClient{Bot: bot}, nil
+	return &LineBotClient{Bot: bot, Store: store}, nil
 }
 
 func (c *LineBotClient) ReplyMessage(events []*linebot.Event, resMessage string) error {
@@ -37,14 +38,26 @@ func (c *LineBotClient) ReplyMessage(events []*linebot.Event, resMessage string)
 	return nil
 }
 
-func (c *LineBotClient) GetMessage(events []*linebot.Event) (string, error) {
+func (c *LineBotClient) SaveMessageToStore(events []*linebot.Event) error {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			switch message := event.Message.(type) {
 			case *linebot.TextMessage:
-				return message.Text, nil
+				userID := event.Source.UserID
+				c.Store.Save(userID, message.Text, "")
+				return nil
 			}
 		}
 	}
-	return "", nil
+	return fmt.Errorf("no message found in events")
+}
+
+func (c *LineBotClient) GetUserID(events []*linebot.Event) (string, error) {
+	for _, event := range events {
+		if event.Type == linebot.EventTypeMessage {
+			userID := event.Source.UserID
+			return userID, nil
+		}
+	}
+	return "", fmt.Errorf("no user ID found in events")
 }
