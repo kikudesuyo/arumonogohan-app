@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/handlers"
+	"github.com/kikudesuyo/arumonogohan-app/api/handler"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func postCallback(c *gin.Context) {
 	if clientMessage == "" {
 		return
 	} else if clientMessage != "" { // 現在は文字列があればレシピを提案
-		replyMessage, err = handlers.HandleSuggestRecipe(clientMessage)
+		replyMessage, err = handler.HandleSuggestRecipe(clientMessage)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
