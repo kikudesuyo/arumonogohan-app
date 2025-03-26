@@ -1,31 +1,27 @@
-package entity
+package service
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
 )
 
-type GeminiAI struct {
-	client *genai.Client
-}
-
-func NewGeminiAI() (*GeminiAI, error) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
+func SuggestRecipe(message string) (string, error) {
+	geminiAI, err := NewGeminiAI()
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
 	}
 	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	mealRecipe, err := geminiAI.GenerateRecipe(ctx, message)
+	mealRecipe = mealRecipe + "\n好みのレシピではなかった場合は、恐れ入りますが再度「メニューを開く」から選択した後に、食材を入力してください。"
 	if err != nil {
-		return nil, fmt.Errorf("error creating GeminiAI client: %v", err)
+		fmt.Println(err.Error())
+		return "", err
 	}
-
-	return &GeminiAI{client: client}, nil
+	return mealRecipe, nil
 }
 
 func (g *GeminiAI) GenerateRecipe(ctx context.Context, ingredients string) (string, error) {

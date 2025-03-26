@@ -3,27 +3,28 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/handler"
+	"github.com/kikudesuyo/arumonogohan-app/api/repository"
+	"github.com/kikudesuyo/arumonogohan-app/api/service"
 )
 
-var store = &entity.LineSessionStore{}
+var store = &repository.ChatSessionStore{}
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
 		fmt.Println("No .env file found")
 	}
-
 	engine := gin.Default()
 	engine.POST("/callback", postCallback)
 	engine.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
 }
 
 func postCallback(c *gin.Context) {
-	lineBot, err := entity.NewLineBotClient(store)
+	lineBot, err := service.NewLineBotClient(store)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -33,70 +34,45 @@ func postCallback(c *gin.Context) {
 		fmt.Println(err.Error())
 		return
 	}
-	lineBot.SaveMessageToStore(events)
+	message, err := lineBot.GetMessage(events)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	userID, err := lineBot.GetUserID(events)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	d, err := store.Get(userID)
+
+	session, err := store.Get(userID)
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		fmt.Println("session not found. creating new session")
+		session = &entity.ChatHistory{Messages: []string{}, State: "menu_select", Timestamp: time.Now()}
+		store.Save(userID, message, session.State)
 	}
-	messages := d.Messages
-	fmt.Println(messages)
-	var menus = []string{
-		"時短メニュー⏱️",
-		"家庭の味🥢",
-		"さっぱりヘルシー🥗",
-		"ガッツリメニュー🍖",
+
+	replayParams := &service.LineReplyParams{
+		LineBot: lineBot,
+		UserID:  userID,
+		Message: message,
+		Session: session,
+		Store:   store,
+		Events:  events,
 	}
-	if len(messages) == 1 {
-		for _, menu := range menus {
-			if menu == messages[len(messages)-1] {
-				replyMessage := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", menu)
-				err = lineBot.ReplyMessage(events, replyMessage)
-				if err != nil {
-					fmt.Println(err.Error())
-					return
-				}
-			}
-		}
-		replyMessage := "メニューを選んでください🍽️"
-		err = lineBot.ReplyMessage(events, replyMessage)
+
+	switch {
+	case session.State == "menu_select":
+		err = service.ReplyMenuSelect(replayParams)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		return
-	}
-	var replyMessage string
-	for _, menu := range menus {
-		if menu == messages[len(messages)-1] {
-			replyMessage := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", menu)
-			err = lineBot.ReplyMessage(events, replyMessage)
-			if err != nil {
-				fmt.Println(err.Error())
-				return
-			}
+	case session.State == "ingredient_input":
+		err = service.ReplyIngredientInput(replayParams)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
 		}
-	}
-	for _, menu := range menus {
-		if menu == messages[len(messages)-2] {
-			replyMessage, err = handler.HandleSuggestRecipe(messages[len(messages)-1])
-			if err != nil {
-				fmt.Println(err.Error())
-				return
-			}
-		}
-	}
-	if replyMessage == "" {
-		replyMessage = "メニューを選んでください🍽️"
-	}
-	err = lineBot.ReplyMessage(events, replyMessage)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
 	}
 }
