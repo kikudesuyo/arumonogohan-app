@@ -16,7 +16,7 @@ func SuggestRecipe(message string) (string, error) {
 	}
 	ctx := context.Background()
 	mealRecipe, err := geminiAI.GenerateRecipe(ctx, message)
-	mealRecipe = mealRecipe + "\n好みのレシピではなかった場合は、恐れ入りますが再度「メニューを開く」から選択した後に、食材を入力してください。"
+	mealRecipe = mealRecipe + "\n期待した回答が得られなかった場合は、恐れ入りますが再度「メニューを開く」から選択した後に、食材を入力してください。"
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", err
