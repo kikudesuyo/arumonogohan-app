@@ -45,4 +45,4 @@ go run cmd/main.go
 
 ## 技術スタック
 
-[![My Skills](https://skillicons.dev/icons?i=go)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=go,gcp)](https://skilldev)
