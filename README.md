@@ -19,8 +19,10 @@
 cp -p .env.example .env
 ```
 
-`GEMINI_` については開発者のアカウントで取得してください
-`LINE_BOT_` については、チャットで送信します
+`GEMINI_` については開発者の Google アカウントで発効してください
+`LINE_BOT_` については、個別で渡します。
+
+### locakhost を外部公開
 
 - ngrok のインストール
 - .env に記載した PORT を同じポート番号を用いて ngrok 起動
@@ -34,8 +36,10 @@ PORT=8081
 ngrok http 8081
 ```
 
-- ngrok を用いてローカルサーバーから WebhookURL を作成
-- 作成した WebhookURL をhttps://developers.line.bizにて作成されたWebhookURLを設定
+- ngrok を用いてローカルサーバーから`WebhookURL`を作成
+- 作成した`WebhookURL`を`https://developers.line.biz`にて作成された`WebhookURL`を設定
+
+### 実行
 
 ```bash
 cd arumonogohan-app/
@@ -43,26 +47,21 @@ go mod tidy
 go run cmd/main.go
 ```
 
-### リモート環境
-
-現在は yaml.app に環境変数を記載してデプロイを行っています。
-.env ファイルに記載している環境変数を yaml.app に移動させてください。
-yaml フォーマットは以下です
-
-```yaml
-API_KEY: "your_api_key"
-```
+## リモート
 
 GCP Cloud Run にデプロイ
 
 ```bash
-gcloud beta run deploy go-http-function \
-       --source . \
-       --function LinbotCallback \
-       --base-image go123 \
-       --region asia-northeast1 \
-       --allow-unauthenticated \
-       --env-vars-file app.yaml
+bash deploy_cloud_functions.sh
+```
+
+### 備考
+
+新しい環境変数を追加する際には、以下の操作を行ってください。
+
+```text
+1. .env に新しい変数を追加
+1. deploy_cloud_functions.sh にて登録した変数の追加
 ```
 
 ## 技術スタック
