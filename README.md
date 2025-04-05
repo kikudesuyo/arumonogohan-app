@@ -47,7 +47,7 @@ go mod tidy
 go run cmd/main.go
 ```
 
-## リモート
+## 本番環境
 
 GCP Cloud Run にデプロイ
 
