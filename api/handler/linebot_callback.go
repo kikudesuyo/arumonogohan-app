@@ -27,47 +27,59 @@ func HandleLinebotCallback(c *gin.Context) {
 			fmt.Println(err.Error())
 			return
 		}
-		message, err := lineBot.GetMessage(events)
+		lineEvent, err := lineBot.GetLineEvent(events)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		userID, err := lineBot.GetUserID(events)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
+		userID := lineEvent.UserID
+		msg := lineEvent.Message
 		session, err := store.Get(userID)
 		if err != nil {
 			fmt.Println("session not found. creating new session")
-			session = &entity.ChatHistory{Messages: []string{}, State: "menu_select", Timestamp: time.Now()}
-			store.Save(userID, message, session.State)
+			state := &entity.MenuCategorySelect{Category: msg}
+			store.Save(userID, state)
+			session = &entity.ChatHistory{StateData: state, Timestamp: time.Now()}
 		}
 
-		replayParams := &service.LineReplyParams{
-			LineBot: lineBot,
-			UserID:  userID,
-			Message: message,
-			Session: session,
-			Store:   store,
-			Events:  events,
-		}
-
-		switch {
-		case session.State == "menu_select":
-			err = service.ReplyMenuSelect(replayParams)
+		var replyMsg string
+		switch session.StateData.GetState() {
+		case "menu_category_select":
+			if entity.IsMenuCategorySelected(msg) {
+				// メニュー選択時の処理
+				newState := &entity.IngredientInput{Message: msg}
+				store.Save(userID, newState)
+				session.StateData = newState
+				replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+			} else {
+				replyMsg = "メニューから料理するジャンルを選択ください🍽️"
+			}
+			err := lineBot.ReplyMessage(events, replyMsg)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
-		case session.State == "ingredient_input":
-			err = service.ReplyIngredientInput(replayParams)
+		case "ingredient_input":
+			// メニュー再選択の場合
+			if entity.IsMenuCategorySelected(msg) {
+				newState := &entity.IngredientInput{Message: msg}
+				store.Save(userID, newState)
+				session.StateData = newState
+				replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+			} else {
+				menuCategory := session.StateData.GetMessage()
+				m, err := service.SuggestRecipe(menuCategory, msg)
+				if err != nil {
+					fmt.Println(err.Error())
+					return
+				}
+				replyMsg = m
+			}
+			err := lineBot.ReplyMessage(events, replyMsg)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
 		}
-		return
 	}
 }
