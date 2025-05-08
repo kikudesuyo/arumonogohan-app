@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
-		fmt.Println("No .env file found")
+		fmt.Println("No .env file found", err)
 	}
 	engine := gin.Default()
 	engine.POST("/callback", handler.HandleLinebotCallback)

@@ -12,6 +12,11 @@ type LineBotClient struct {
 	Bot *linebot.Client
 }
 
+type LineUserMessage struct {
+	UserID  string
+	Message string
+}
+
 func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error) {
 	bot, err := linebot.New(
 		os.Getenv("LINE_BOT_CHANNEL_SECRET"),
@@ -23,24 +28,17 @@ func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error
 	return &LineBotClient{Bot: bot}, nil
 }
 
-func (c *LineBotClient) GetMessage(events []*linebot.Event) (string, error) {
+func (c *LineBotClient) GetLineEvent(events []*linebot.Event) (*LineUserMessage, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
-			switch message := event.Message.(type) {
-			case *linebot.TextMessage:
-				return message.Text, nil
+			// メッセージがテキスト型の場合
+			if message, ok := event.Message.(*linebot.TextMessage); ok {
+				return &LineUserMessage{
+					UserID:  event.Source.UserID,
+					Message: message.Text,
+				}, nil
 			}
 		}
 	}
-	return "", fmt.Errorf("no message found in events")
-}
-
-func (c *LineBotClient) GetUserID(events []*linebot.Event) (string, error) {
-	for _, event := range events {
-		if event.Type == linebot.EventTypeMessage {
-			userID := event.Source.UserID
-			return userID, nil
-		}
-	}
-	return "", fmt.Errorf("no user ID found in events")
+	return nil, fmt.Errorf("no message found in events")
 }
