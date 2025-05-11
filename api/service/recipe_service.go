@@ -112,5 +112,3 @@ func (g *GeminiAI) isTampering(ctx context.Context, model *genai.GenerativeModel
 	}
 	return false, nil
 }
-
-//
