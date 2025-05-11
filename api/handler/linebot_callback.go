@@ -33,7 +33,7 @@ func HandleLinebotCallback(c *gin.Context) {
 			return
 		}
 		userID := lineEvent.UserID
-		msg := lineEvent.Message
+		msg := lineEvent.Msg
 		session, err := store.Get(userID)
 		if err != nil {
 			fmt.Println("session not found. creating new session")
@@ -47,14 +47,14 @@ func HandleLinebotCallback(c *gin.Context) {
 		case "menu_category_select":
 			if entity.IsMenuCategorySelected(msg) {
 				// メニュー選択時の処理
-				newState := &entity.IngredientInput{Message: msg}
+				newState := &entity.IngredientInput{Msg: msg}
 				store.Save(userID, newState)
 				session.StateData = newState
 				replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 			} else {
 				replyMsg = "メニューから料理するジャンルを選択ください🍽️"
 			}
-			err := lineBot.ReplyMessage(events, replyMsg)
+			err := lineBot.ReplyMsg(events, replyMsg)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -62,12 +62,12 @@ func HandleLinebotCallback(c *gin.Context) {
 		case "ingredient_input":
 			// メニュー再選択の場合
 			if entity.IsMenuCategorySelected(msg) {
-				newState := &entity.IngredientInput{Message: msg}
+				newState := &entity.IngredientInput{Msg: msg}
 				store.Save(userID, newState)
 				session.StateData = newState
 				replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 			} else {
-				menuCategory := session.StateData.GetMessage()
+				menuCategory := session.StateData.GetMsg()
 				m, err := service.SuggestRecipe(menuCategory, msg)
 				if err != nil {
 					fmt.Println(err.Error())
@@ -75,7 +75,7 @@ func HandleLinebotCallback(c *gin.Context) {
 				}
 				replyMsg = m
 			}
-			err := lineBot.ReplyMessage(events, replyMsg)
+			err := lineBot.ReplyMsg(events, replyMsg)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
