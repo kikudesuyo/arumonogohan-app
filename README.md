@@ -5,9 +5,19 @@
 
 #### 概要
 
-家にある残り物で、料理のレシピを提案してくれるアプリです。
+食べたい料理のカテゴリと、使用したい食材を LINE で Bot に送信すると、それに応じたレシピを提案してくれるサービスです。
 
-#### [あるものごはん](https://lin.ee/pLzG7zn)
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/77d770c9-ad66-4f49-9be0-d1e438076e50.jpeg" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/ff9d9c9a-5d5f-4169-9331-68ccc09a294e.png" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/ef622424-cbbc-443b-8626-109b28059a00.png" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/933e34bc-6412-4bf0-8122-922c126868e4.jpeg" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/5539d521-7083-44b8-87ba-ee8f0e363a25.png" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/c766122e-e8f4-4dd1-8ca3-37327af25cba.png" width="300" />
+  <img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/3767231/45d7a6a9-c78b-47be-ab02-964370c3c8ec.png" width="300" />
+</div>
+
+#### [LINE で「あるものごはん」を使ってみる](https://lin.ee/pLzG7zn)
 
 ### QR コード
 
