@@ -12,9 +12,9 @@ type LineBotClient struct {
 	Bot *linebot.Client
 }
 
-type LineUserMessage struct {
-	UserID  string
-	Message string
+type LineUserMsg struct {
+	UserID string
+	Msg    string
 }
 
 func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error) {
@@ -28,14 +28,14 @@ func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error
 	return &LineBotClient{Bot: bot}, nil
 }
 
-func (c *LineBotClient) GetLineEvent(events []*linebot.Event) (*LineUserMessage, error) {
+func (c *LineBotClient) GetLineEvent(events []*linebot.Event) (*LineUserMsg, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			// メッセージがテキスト型の場合
-			if message, ok := event.Message.(*linebot.TextMessage); ok {
-				return &LineUserMessage{
-					UserID:  event.Source.UserID,
-					Message: message.Text,
+			if msg, ok := event.Message.(*linebot.TextMessage); ok {
+				return &LineUserMsg{
+					UserID: event.Source.UserID,
+					Msg:    msg.Text,
 				}, nil
 			}
 		}
