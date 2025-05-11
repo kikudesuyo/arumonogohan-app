@@ -11,7 +11,7 @@
 
 ### QR コード
 
-<img src="https://qr-official.line.me/gs/M_718sipgi_GW.png?oat_content=qr" width=160>
+<img src="./assets/line-bot-qr.png" width=160, alt="LINE公式アカウントのQRコード">
 
 ## 機能
 
