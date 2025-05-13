@@ -42,11 +42,10 @@ func HandleLinebotCallback(c *gin.Context) {
 		store.Save(*chatSession)
 	}
 
-	var replyMsg string
 	switch chatSession.State {
 	case entity.StateMenuCategorySelect:
 		if !entity.IsMenuCategorySelected(msg) {
-			replyMsg = "メニューから料理するジャンルを選択ください🍽️"
+			replyMsg := "メニューから料理するジャンルを選択ください🍽️"
 			err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -61,7 +60,7 @@ func HandleLinebotCallback(c *gin.Context) {
 		chatSession.Timestamp = time.Now()
 
 		store.Save(*chatSession)
-		replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 		err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -73,32 +72,35 @@ func HandleLinebotCallback(c *gin.Context) {
 			chatSession.MenuCategory = msg
 			chatSession.State = entity.StateIngredientInput
 			chatSession.Timestamp = time.Now()
-
 			store.Save(*chatSession)
 
-			replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+			replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+			err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			return
 		} else {
 			recipeInput := usecase.RecipeInput{
 				MenuCategory: chatSession.MenuCategory,
 				Ingredients:  msg,
 			}
-			recipeMsg, err := usecase.SuggestRecipe(recipeInput)
+			replyMsg, err := usecase.SuggestRecipe(recipeInput)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
-			fmt.Println(recipeMsg, "test")
-			replyMsg = recipeMsg
-
 			chatSession.State = entity.StateMenuCategorySelect
 			chatSession.MenuCategory = ""
 			chatSession.Timestamp = time.Now()
-
 			store.Save(*chatSession)
-		}
-		err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
-		if err != nil {
-			fmt.Println(err.Error())
+
+			err = usecase.ReplyMsgToLine(lineBot, events, replyMsg)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
 			return
 		}
 	}
