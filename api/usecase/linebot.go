@@ -8,9 +8,9 @@ import (
 )
 
 type LineMsgContext struct {
-	Bot    *linebot.Client
-	Events []*linebot.Event
-	Msg    *LineUserMsg
+	Bot     *linebot.Client
+	Events  []*linebot.Event
+	UserMsg *LineUserMsg
 }
 
 type LineUserMsg struct {

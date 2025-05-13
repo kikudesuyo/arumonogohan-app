@@ -25,55 +25,76 @@ func HandleLinebotCallback(c *gin.Context) {
 		fmt.Println(err.Error())
 		return
 	}
-	lineMsg := lineMsgCtx.Msg
 	lineBot := lineMsgCtx.Bot
 	events := lineMsgCtx.Events
-	userID := lineMsg.UserID
-	msg := lineMsg.Msg
-	session, err := store.Get(userID)
-	if err != nil {
+	userID := lineMsgCtx.UserMsg.UserID
+	msg := lineMsgCtx.UserMsg.Msg
+
+	chatSession, found := store.Get(userID)
+	if !found {
 		fmt.Println("session not found. creating new session")
-		state := entity.StateMenuCategorySelect
-		store.Save(userID, state)
-		session = &entity.ChatHistory{State: state, Timestamp: time.Now()}
+		chatSession = &repository.ChatSession{
+			SessionID:    userID,
+			MenuCategory: "",
+			State:        entity.StateMenuCategorySelect,
+			Timestamp:    time.Now(),
+		}
+		store.Save(*chatSession)
 	}
 
 	var replyMsg string
-	switch session.State {
+	switch chatSession.State {
 	case entity.StateMenuCategorySelect:
-		if entity.IsMenuCategorySelected(msg) {
-			// メニュー選択時の処理
-			newState := entity.StateMenuCategorySelect
-			store.Save(userID, newState)
-			session.State = newState
-			replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
-		} else {
+		if !entity.IsMenuCategorySelected(msg) {
 			replyMsg = "メニューから料理するジャンルを選択ください🍽️"
+			err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			return
 		}
+		// メニューカテゴリ選択時の処理
+
+		chatSession.MenuCategory = msg
+		chatSession.State = entity.StateIngredientInput
+		chatSession.Timestamp = time.Now()
+
+		store.Save(*chatSession)
+		replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 		err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 	case entity.StateIngredientInput:
-		// メニュー再選択の場合
+		// メニューカテゴリ再選択の場合
 		if entity.IsMenuCategorySelected(msg) {
-			newState := entity.StateMenuCategorySelect
-			store.Save(userID, newState)
-			session.State = newState
+			chatSession.MenuCategory = msg
+			chatSession.State = entity.StateIngredientInput
+			chatSession.Timestamp = time.Now()
+
+			store.Save(*chatSession)
+
 			replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 		} else {
-			menuCategory := session.Msg
 			recipeInput := usecase.RecipeInput{
-				MenuCategory: menuCategory,
+				MenuCategory: chatSession.MenuCategory,
 				Ingredients:  msg,
 			}
-			m, err := usecase.SuggestRecipe(recipeInput)
+			recipeMsg, err := usecase.SuggestRecipe(recipeInput)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
-			replyMsg = m
+			fmt.Println(recipeMsg, "test")
+			replyMsg = recipeMsg
+
+			chatSession.State = entity.StateMenuCategorySelect
+			chatSession.MenuCategory = ""
+			chatSession.Timestamp = time.Now()
+
+			store.Save(*chatSession)
 		}
 		err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
 		if err != nil {
@@ -97,8 +118,8 @@ func parseLineRequest(r *http.Request) (*usecase.LineMsgContext, error) {
 		return nil, fmt.Errorf("failed to get line message: %v", err)
 	}
 	return &usecase.LineMsgContext{
-		Bot:    bot,
-		Events: events,
-		Msg:    msg,
+		Bot:     bot,
+		Events:  events,
+		UserMsg: msg,
 	}, nil
 }
