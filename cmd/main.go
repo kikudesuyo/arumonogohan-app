@@ -13,7 +13,7 @@ func main() {
 	if err := godotenv.Load(".env"); err != nil {
 		fmt.Println("No .env file found", err)
 	}
-	engine := gin.Default()
-	engine.POST("/callback", handler.HandleLinebotCallback)
-	engine.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
+	r := gin.Default()
+	r.POST("/callback", handler.HandleLinebotCallback)
+	r.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
 }
