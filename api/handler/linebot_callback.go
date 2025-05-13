@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
-	"github.com/kikudesuyo/arumonogohan-app/api/service"
+	"github.com/kikudesuyo/arumonogohan-app/api/usecase"
 )
 
 var store = &repository.ChatSessionStore{}
@@ -19,7 +19,7 @@ func HandleLinebotCallback(c *gin.Context) {
 		return
 	}
 	// LINE Botクライアントの場合
-	lineBot, err := service.NewLineBotClient()
+	lineBot, err := usecase.NewLineBotClient()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -70,11 +70,11 @@ func HandleLinebotCallback(c *gin.Context) {
 			replyMsg = fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 		} else {
 			menuCategory := session.Msg
-			recipeInput := service.RecipeInput{
+			recipeInput := usecase.RecipeInput{
 				MenuCategory: menuCategory,
 				Ingredients:  msg,
 			}
-			m, err := service.SuggestRecipe(recipeInput)
+			m, err := usecase.SuggestRecipe(recipeInput)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
