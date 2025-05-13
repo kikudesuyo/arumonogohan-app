@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -12,34 +11,31 @@ type ChatSessionStore struct {
 	store sync.Map
 }
 
-func (l *ChatSessionStore) Save(sessionID string, state entity.ChatState) {
-	var session entity.ChatHistory
-	value, found := l.store.Load(sessionID)
-	if found {
-		session = value.(entity.ChatHistory)
-	}
-	session.StateData = state
-	session.Timestamp = time.Now()
-
-	l.store.Store(sessionID, session)
+type ChatSession struct {
+	SessionID    string
+	MenuCategory string
+	State        entity.ChatState
+	Timestamp    time.Time
 }
 
-func (l *ChatSessionStore) Get(sessionID string) (*entity.ChatHistory, error) {
-	value, ok := l.store.Load(sessionID)
-	if !ok {
-		return nil, fmt.Errorf("no session found for user %s", sessionID)
+func (l *ChatSessionStore) Get(sessionID string) (*ChatSession, bool) {
+	value, found := l.store.Load(sessionID)
+	if !found {
+		return nil, false
 	}
-	session := value.(entity.ChatHistory)
+	session := value.(ChatSession)
 	// 5分以上経過したら履歴を削除
 	if time.Since(session.Timestamp) > 5*time.Minute {
 		l.store.Delete(sessionID)
-		return nil, fmt.Errorf("session expired for user %s", sessionID)
+		return nil, false
 	}
-
-	return &session, nil
+	return &session, true
 }
 
-// Session削除
-func (l *ChatSessionStore) Delete(userID string) {
-	l.store.Delete(userID)
+func (l *ChatSessionStore) Save(session ChatSession) {
+	l.store.Store(session.SessionID, session)
+}
+
+func (l *ChatSessionStore) Delete(sessionID string) {
+	l.store.Delete(sessionID)
 }
