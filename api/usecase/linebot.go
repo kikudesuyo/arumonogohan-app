@@ -7,8 +7,10 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-type LineBotClient struct {
-	Bot *linebot.Client
+type LineMsgContext struct {
+	Bot    *linebot.Client
+	Events []*linebot.Event
+	Msg    *LineUserMsg
 }
 
 type LineUserMsg struct {
@@ -16,7 +18,7 @@ type LineUserMsg struct {
 	Msg    string
 }
 
-func NewLineBotClient() (*LineBotClient, error) {
+func NewLineBotClient() (*linebot.Client, error) {
 	channelSecret := os.Getenv("LINE_BOT_CHANNEL_SECRET")
 	channelToken := os.Getenv("LINE_BOT_CHANNEL_TOKEN")
 	if channelSecret == "" || channelToken == "" {
@@ -29,10 +31,10 @@ func NewLineBotClient() (*LineBotClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating LINE bot client: %v", err)
 	}
-	return &LineBotClient{Bot: bot}, nil
+	return bot, nil
 }
 
-func (c *LineBotClient) GetLineMsg(events []*linebot.Event) (*LineUserMsg, error) {
+func GetLineMsg(events []*linebot.Event) (*LineUserMsg, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			// メッセージがテキスト型の場合
@@ -44,5 +46,20 @@ func (c *LineBotClient) GetLineMsg(events []*linebot.Event) (*LineUserMsg, error
 			}
 		}
 	}
-	return nil, fmt.Errorf("no message found in events")
+	return nil, fmt.Errorf("no text message found in events")
+}
+
+func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) error {
+	for _, event := range events {
+		if event.Type == linebot.EventTypeMessage {
+			_, err := bot.ReplyMessage(
+				event.ReplyToken,
+				linebot.NewTextMessage(msg),
+			).Do()
+			if err != nil {
+				return fmt.Errorf("error sending reply message: %v", err)
+			}
+		}
+	}
+	return nil
 }
