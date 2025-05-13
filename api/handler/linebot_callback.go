@@ -53,8 +53,6 @@ func HandleLinebotCallback(c *gin.Context) {
 			}
 			return
 		}
-		// メニューカテゴリ選択時の処理
-
 		chatSession.MenuCategory = msg
 		chatSession.State = entity.StateIngredientInput
 		chatSession.Timestamp = time.Now()
@@ -66,6 +64,7 @@ func HandleLinebotCallback(c *gin.Context) {
 			fmt.Println(err.Error())
 			return
 		}
+		return
 	case entity.StateIngredientInput:
 		// メニューカテゴリ再選択の場合
 		if entity.IsMenuCategorySelected(msg) {
