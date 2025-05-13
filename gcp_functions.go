@@ -10,12 +10,8 @@ import (
 
 func init() {
 	functions.HTTP("LinbotCallback", func(w http.ResponseWriter, req *http.Request) {
-		// Ginのルーターを作成
 		r := gin.Default()
-		// Ginのハンドラを定義
 		r.POST("/callback", handler.HandleLinebotCallback)
-
-		// リクエストをGinに渡して処理させる
 		r.ServeHTTP(w, req)
 	})
 }
