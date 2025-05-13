@@ -18,7 +18,7 @@ func (l *ChatSessionStore) Save(sessionID string, state entity.ChatState) {
 	if found {
 		session = value.(entity.ChatHistory)
 	}
-	session.StateData = state
+	session.State = state
 	session.Timestamp = time.Now()
 
 	l.store.Store(sessionID, session)
@@ -40,6 +40,6 @@ func (l *ChatSessionStore) Get(sessionID string) (*entity.ChatHistory, error) {
 }
 
 // Session削除
-func (l *ChatSessionStore) Delete(userID string) {
-	l.store.Delete(userID)
+func (l *ChatSessionStore) Delete(sessionID string) {
+	l.store.Delete(sessionID)
 }

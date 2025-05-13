@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -17,10 +16,15 @@ type LineUserMsg struct {
 	Msg    string
 }
 
-func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error) {
+func NewLineBotClient() (*LineBotClient, error) {
+	channelSecret := os.Getenv("LINE_BOT_CHANNEL_SECRET")
+	channelToken := os.Getenv("LINE_BOT_CHANNEL_TOKEN")
+	if channelSecret == "" || channelToken == "" {
+		return nil, fmt.Errorf("LINE_BOT_CHANNEL_SECRET or LINE_BOT_CHANNEL_TOKEN is not set")
+	}
 	bot, err := linebot.New(
-		os.Getenv("LINE_BOT_CHANNEL_SECRET"),
-		os.Getenv("LINE_BOT_CHANNEL_TOKEN"),
+		channelSecret,
+		channelToken,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating LINE bot client: %v", err)
@@ -28,7 +32,7 @@ func NewLineBotClient(store *repository.ChatSessionStore) (*LineBotClient, error
 	return &LineBotClient{Bot: bot}, nil
 }
 
-func (c *LineBotClient) GetLineEvent(events []*linebot.Event) (*LineUserMsg, error) {
+func (c *LineBotClient) GetLineMsg(events []*linebot.Event) (*LineUserMsg, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			// メッセージがテキスト型の場合
