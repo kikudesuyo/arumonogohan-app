@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
@@ -27,21 +28,20 @@ func NewGeminiAI() (*GeminiAI, error) {
 	return &GeminiAI{client: client}, nil
 }
 
-// GenerateContentFromPrompt sends a prompt to Gemini and returns the generated content as a string
 func (g *GeminiAI) GenerateContentFromPrompt(ctx context.Context, model *genai.GenerativeModel, prompt string) (string, error) {
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		return "", fmt.Errorf("error generating content: %v", err)
 	}
 
-	var result string
+	var sb strings.Builder
 	for _, cand := range resp.Candidates {
 		if cand.Content == nil {
 			continue
 		}
 		for _, part := range cand.Content.Parts {
-			result += fmt.Sprintf("%v", part)
+			sb.WriteString(fmt.Sprint(part))
 		}
 	}
-	return result, nil
+	return sb.String(), nil
 }
