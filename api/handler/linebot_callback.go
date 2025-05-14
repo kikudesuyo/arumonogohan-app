@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -85,7 +86,8 @@ func HandleLinebotCallback(c *gin.Context) {
 				MenuCategory: chatSession.MenuCategory,
 				Ingredients:  msg,
 			}
-			replyMsg, err := usecase.SuggestRecipe(recipeInput)
+			ctx := context.Background()
+			replyMsg, err := usecase.SuggestRecipe(ctx, recipeInput)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
