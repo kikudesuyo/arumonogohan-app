@@ -5,19 +5,16 @@ import (
 	"fmt"
 )
 
-var GeminiModel = "gemini-1.5-flash"
-
 type RecipeInput struct {
 	MenuCategory string `json:"menu_category"`
 	Ingredients  string `json:"ingredients"`
 }
 
-func SuggestRecipe(input RecipeInput) (string, error) {
-	geminiAI, err := NewGeminiAI()
+func SuggestRecipe(ctx context.Context, input RecipeInput) (string, error) {
+	geminiAI, err := NewGeminiAI(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to create GeminiAI client: %v", err)
 	}
-	ctx := context.Background()
 	mealRecipe, err := geminiAI.GenerateRecipe(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate recipe: %v", err)
@@ -27,12 +24,11 @@ func SuggestRecipe(input RecipeInput) (string, error) {
 }
 
 func (g *GeminiAI) GenerateRecipe(ctx context.Context, input RecipeInput) (string, error) {
-	model := g.client.GenerativeModel(GeminiModel)
-	tampering, err := g.isPromptTempered(ctx, model, input.Ingredients)
+	isPromptTempered, err := g.isPromptTempered(ctx, input.Ingredients)
 	if err != nil {
 		return "", fmt.Errorf("error checking tampering: %v", err)
 	}
-	if tampering {
+	if isPromptTempered {
 		return "無効な入力です。食材を入力してください。", nil
 	}
 
@@ -58,7 +54,7 @@ func (g *GeminiAI) GenerateRecipe(ctx context.Context, input RecipeInput) (strin
 
 	入力された食材: %s`, input.MenuCategory, input.Ingredients)
 
-	recipe, err := g.generateContentFromPrompt(ctx, model, prompt)
+	recipe, err := g.generateContentFromPrompt(ctx, prompt)
 	if err != nil {
 		return "", fmt.Errorf("error generating content: %v", err)
 	}
