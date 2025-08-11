@@ -44,3 +44,4 @@ gcloud beta run deploy "$app_name" \
   --base-image "$go_version" \
   --allow-unauthenticated \
   --set-env-vars "$env_var_string" \
+  --project "arumonogohan-app" 
