@@ -15,5 +15,6 @@ func main() {
 	}
 	r := gin.Default()
 	r.POST("/callback", handler.HandleLinebotCallback)
+	r.POST("/suggest", handler.HandleSuggestRecipe)
 	r.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
 }

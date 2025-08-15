@@ -15,6 +15,39 @@ import (
 
 var store = &repository.ChatSessionStore{}
 
+// formatRecipeForLine は、Recipe構造体をLINEメッセージ用の整形済み文字列に変換します。
+func formatRecipeForLine(recipe entity.Recipe) string {
+	// レシピが生成できなかった場合やエラーの場合は、サマリーメッセージのみを返す
+	if recipe.Title == "提案できません" || recipe.Title == "無効な入力です" || recipe.Title == "エラー" {
+		return recipe.Summary
+	}
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("今日のレシピは「%s」で決まり！\n\n", recipe.Title))
+
+	if len(recipe.Ingredients) > 0 {
+		builder.WriteString("【材料】\n")
+		for _, ingredient := range recipe.Ingredients {
+			builder.WriteString(fmt.Sprintf("- %s\n", ingredient))
+		}
+		builder.WriteString("\n")
+	}
+
+	if len(recipe.Instructions) > 0 {
+		builder.WriteString("【作り方】\n")
+		for i, instruction := range recipe.Instructions {
+			builder.WriteString(fmt.Sprintf("%d. %s\n", i+1, instruction))
+		}
+		builder.WriteString("\n")
+	}
+
+	if recipe.Summary != "" {
+		builder.WriteString(fmt.Sprintf("【ポイント】\n%s\n", recipe.Summary))
+	}
+
+	return builder.String()
+}
+
 func HandleLinebotCallback(c *gin.Context) {
 	userAgent := c.GetHeader("User-Agent")
 	if !strings.Contains(userAgent, "LineBotWebhook") {
@@ -62,8 +95,8 @@ func HandleLinebotCallback(c *gin.Context) {
 		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
 		err := usecase.ReplyMsgToLine(lineBot, events, replyMsg)
 		if err != nil {
-			fmt.Println(err.Error())
-			return
+				fmt.Println(err.Error())
+				return
 		}
 		return
 	case entity.StateIngredientInput:
@@ -87,11 +120,15 @@ func HandleLinebotCallback(c *gin.Context) {
 				Ingredients:  msg,
 			}
 			ctx := context.Background()
-			replyMsg, err := usecase.SuggestRecipe(ctx, recipeInput)
+			recipe, err := usecase.SuggestRecipe(ctx, recipeInput)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
 			}
+
+			// Recipe構造体をLINE用の文字列にフォーマットする
+			replyMsg := formatRecipeForLine(recipe)
+
 			chatSession.State = entity.StateMenuCategorySelect
 			chatSession.MenuCategory = ""
 			chatSession.Timestamp = time.Now()
@@ -124,5 +161,6 @@ func parseLineRequest(r *http.Request) (*usecase.LineMsgContext, error) {
 		Bot:     bot,
 		Events:  events,
 		UserMsg: msg,
-	}, nil
+	},
+	nil
 }
