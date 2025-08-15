@@ -42,19 +42,19 @@ func ParseLinebotRequest(r *http.Request, bot *linebot.Client) ([]*linebot.Event
 	return events, nil
 }
 
-func GetLineUserMsg(events []*linebot.Event) (*LineUserMsg, error) {
+func GetLineUserMsg(events []*linebot.Event) (LineUserMsg, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			// メッセージがテキスト型の場合
 			if msg, ok := event.Message.(*linebot.TextMessage); ok {
-				return &LineUserMsg{
+				return LineUserMsg{
 					UserID: event.Source.UserID,
 					Msg:    msg.Text,
 				}, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("no text message found in events")
+	return LineUserMsg{}, fmt.Errorf("no text message found in events")
 }
 
 func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) error {

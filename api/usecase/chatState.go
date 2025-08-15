@@ -12,53 +12,44 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-var store = &repository.ChatSessionStore{}
-
-func GetLineUserMsg(events []*linebot.Event) (*infrastructure.LineUserMsg, error) {
-	lineUserMsg, err := infrastructure.GetLineUserMsg(events)
-	if err != nil {
-		return nil, err
-	}
-	return lineUserMsg, nil
-}
-
-func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) error {
-	err := infrastructure.ReplyMsgToLine(bot, events, msg)
-	return err
-}
-
-func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, msg string, chatSession *repository.ChatSession) error {
-	chatSession.MenuCategory = msg
-	chatSession.State = entity.StateIngredientInput
-	chatSession.Timestamp = time.Now()
-
-	store.Save(*chatSession)
-	replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, store *repository.ChatSessionStore) error {
+	replyMsg := fmt.Sprintf("「%s」ですね✨️ \n次に使う食材を教えて下さい!👨‍🍳", lineUserMsg.Msg)
 	err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
 	if err != nil {
 		return err
 	}
+
+	//状態更新
+	chatSession := &repository.ChatSession{
+		SessionID:    lineUserMsg.UserID,
+		MenuCategory: lineUserMsg.Msg,
+		State:        entity.StateIngredientInput,
+		Timestamp:    time.Now(),
+	}
+	store.UpsertChatSession(*chatSession)
 	return nil
+
 }
 
-func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, msg string, chatSession *repository.ChatSession) error {
+func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *repository.ChatSession, store *repository.ChatSessionStore) error {
 	// メニューカテゴリ再選択の場合
-	if entity.IsMenuCategorySelected(msg) {
-		chatSession.MenuCategory = msg
+	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
+		chatSession.MenuCategory = lineUserMsg.Msg
 		chatSession.State = entity.StateIngredientInput
 		chatSession.Timestamp = time.Now()
-		store.Save(*chatSession)
+		store.UpsertChatSession(*chatSession)
 
-		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", lineUserMsg.Msg)
 		err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
+
 	recipeInput := RecipeInput{
 		MenuCategory: chatSession.MenuCategory,
-		Ingredients:  msg,
+		Ingredients:  lineUserMsg.Msg,
 	}
 	ctx := context.Background()
 	recipe, err := SuggestRecipe(ctx, recipeInput)
@@ -68,16 +59,11 @@ func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, msg st
 
 	// Recipe構造体をLINE用の文字列にフォーマットする
 	replyMsg := formatRecipeForLine(recipe)
-
-	chatSession.State = entity.StateMenuCategorySelect
-	chatSession.MenuCategory = ""
-	chatSession.Timestamp = time.Now()
-	store.Save(*chatSession)
-
 	err = infrastructure.ReplyMsgToLine(bot, events, replyMsg)
 	if err != nil {
 		return err
 	}
+	store.InsertInitChatSession(lineUserMsg.UserID)
 	return nil
 }
 
