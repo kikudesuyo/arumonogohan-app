@@ -1,65 +1,115 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"strings"
+	"time"
 
+	"github.com/kikudesuyo/arumonogohan-app/api/entity"
+	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
+	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-type LineMsgContext struct {
-	Bot     *linebot.Client
-	Events  []*linebot.Event
-	UserMsg *LineUserMsg
-}
+var store = &repository.ChatSessionStore{}
 
-type LineUserMsg struct {
-	UserID string
-	Msg    string
-}
-
-func NewLineBotClient() (*linebot.Client, error) {
-	channelSecret := os.Getenv("LINE_BOT_CHANNEL_SECRET")
-	channelToken := os.Getenv("LINE_BOT_CHANNEL_TOKEN")
-	if channelSecret == "" || channelToken == "" {
-		return nil, fmt.Errorf("LINE_BOT_CHANNEL_SECRET or LINE_BOT_CHANNEL_TOKEN is not set")
-	}
-	bot, err := linebot.New(
-		channelSecret,
-		channelToken,
-	)
+func GetLineUserMsg(events []*linebot.Event) (*infrastructure.LineUserMsg, error) {
+	lineUserMsg, err := infrastructure.GetLineUserMsg(events)
 	if err != nil {
-		return nil, fmt.Errorf("error creating LINE bot client: %v", err)
+		return nil, err
 	}
-	return bot, nil
-}
-
-func GetLineMsg(events []*linebot.Event) (*LineUserMsg, error) {
-	for _, event := range events {
-		if event.Type == linebot.EventTypeMessage {
-			// メッセージがテキスト型の場合
-			if msg, ok := event.Message.(*linebot.TextMessage); ok {
-				return &LineUserMsg{
-					UserID: event.Source.UserID,
-					Msg:    msg.Text,
-				}, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("no text message found in events")
+	return lineUserMsg, nil
 }
 
 func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) error {
-	for _, event := range events {
-		if event.Type == linebot.EventTypeMessage {
-			_, err := bot.ReplyMessage(
-				event.ReplyToken,
-				linebot.NewTextMessage(msg),
-			).Do()
-			if err != nil {
-				return fmt.Errorf("error sending reply message: %v", err)
-			}
-		}
+	err := infrastructure.ReplyMsgToLine(bot, events, msg)
+	return err
+}
+
+func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, msg string, chatSession *repository.ChatSession) error {
+	chatSession.MenuCategory = msg
+	chatSession.State = entity.StateIngredientInput
+	chatSession.Timestamp = time.Now()
+
+	store.Save(*chatSession)
+	replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+	err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, msg string, chatSession *repository.ChatSession) error {
+	// メニューカテゴリ再選択の場合
+	if entity.IsMenuCategorySelected(msg) {
+		chatSession.MenuCategory = msg
+		chatSession.State = entity.StateIngredientInput
+		chatSession.Timestamp = time.Now()
+		store.Save(*chatSession)
+
+		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", msg)
+		err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	recipeInput := RecipeInput{
+		MenuCategory: chatSession.MenuCategory,
+		Ingredients:  msg,
+	}
+	ctx := context.Background()
+	recipe, err := SuggestRecipe(ctx, recipeInput)
+	if err != nil {
+		return err
+	}
+
+	// Recipe構造体をLINE用の文字列にフォーマットする
+	replyMsg := formatRecipeForLine(recipe)
+
+	chatSession.State = entity.StateMenuCategorySelect
+	chatSession.MenuCategory = ""
+	chatSession.Timestamp = time.Now()
+	store.Save(*chatSession)
+
+	err = infrastructure.ReplyMsgToLine(bot, events, replyMsg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// formatRecipeForLine は、Recipe構造体をLINEメッセージ用の整形済み文字列に変換します。
+func formatRecipeForLine(recipe entity.Recipe) string {
+	// レシピが生成できなかった場合やエラーの場合は、サマリーメッセージのみを返す
+	if recipe.Title == "提案できません" || recipe.Title == "無効な入力です" || recipe.Title == "エラー" {
+		return recipe.Summary
+	}
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("今日のレシピは「%s」で決まり！\n\n", recipe.Title))
+
+	if len(recipe.Ingredients) > 0 {
+		builder.WriteString("【材料】\n")
+		for _, ingredient := range recipe.Ingredients {
+			builder.WriteString(fmt.Sprintf("- %s\n", ingredient))
+		}
+		builder.WriteString("\n")
+	}
+
+	if len(recipe.Instructions) > 0 {
+		builder.WriteString("【作り方】\n")
+		for i, instruction := range recipe.Instructions {
+			builder.WriteString(fmt.Sprintf("%d. %s\n", i+1, instruction))
+		}
+		builder.WriteString("\n")
+	}
+
+	if recipe.Summary != "" {
+		builder.WriteString(fmt.Sprintf("【ポイント】\n%s\n", recipe.Summary))
+	}
+
+	return builder.String()
 }
