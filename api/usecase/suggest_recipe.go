@@ -14,6 +14,12 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		return entity.RecipeInputResp{}, fmt.Errorf("failed to create GeminiAI client: %v", err)
 	}
 
+	fmt.Println("---tempered---")
+	_, err = isPromptTempered(geminiAI, ctx, req)
+	if err != nil {
+		return entity.RecipeInputResp{}, fmt.Errorf("prompt tampering detected: %v", err)
+	}
+
 	// AIRecipe の構造から自動でツールを生成
 	tools := []infrastructure.Tool{
 		infrastructure.MakeToolFromStruct[entity.RecipeInputResp]("submit_recipe", "ユーザーに提案するレシピを送信する"),
@@ -29,17 +35,9 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		req.Ingredients,
 	)
 
-	// Infra 層に投げる（ビジネスロジックはここでは扱わない）
 	aiRecipe, err := infrastructure.GetJSONResp[entity.RecipeInputResp](geminiAI, ctx, prompt, tools)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("AI generate failed: %v", err)
 	}
-
-	// AI のレスポンスを Usecase の構造体に変換
-	return entity.RecipeInputResp{
-		Title:        aiRecipe.Title,
-		Summary:      aiRecipe.Summary,
-		Ingredients:  aiRecipe.Ingredients,
-		Instructions: aiRecipe.Instructions,
-	}, nil
+	return aiRecipe, nil
 }

@@ -113,7 +113,6 @@ func MakeToolFromStruct[T any](name, desc string) Tool {
 
 // GetJSONResp は Gemini の FunctionCall の Args を任意の構造体にマッピング
 func GetJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools []Tool) (T, error) {
-	var result T
 	modelCopy := *g.Model
 
 	var genaiTools []*genai.Tool
@@ -135,26 +134,26 @@ func GetJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools [
 
 	resp, err := modelCopy.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return result, fmt.Errorf("error generating content: %v", err)
+		return *new(T), fmt.Errorf("error generating content: %v", err)
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return result, fmt.Errorf("no content returned from AI")
+		return *new(T), fmt.Errorf("no content returned from AI")
 	}
 
 	fc, ok := resp.Candidates[0].Content.Parts[0].(genai.FunctionCall)
 	if !ok {
-		return result, fmt.Errorf("unexpected content type: %T", resp.Candidates[0].Content.Parts[0])
+		return *new(T), fmt.Errorf("unexpected content type: %T", resp.Candidates[0].Content.Parts[0])
 	}
 
 	jsonBytes, err := json.Marshal(fc.Args)
 	if err != nil {
-		return result, fmt.Errorf("failed to marshal function call args: %v", err)
+		return *new(T), fmt.Errorf("failed to marshal function call args: %v", err)
 	}
 
+	var result T
 	if err := json.Unmarshal(jsonBytes, &result); err != nil {
-		return result, fmt.Errorf("failed to unmarshal json to struct: %v", err)
+		return *new(T), fmt.Errorf("failed to unmarshal json to struct: %v", err)
 	}
-
 	return result, nil
 }
