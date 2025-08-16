@@ -1,16 +1,16 @@
-package usecase
+package infrastructure
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-type LineMsgContext struct {
-	Bot     *linebot.Client
-	Events  []*linebot.Event
-	UserMsg *LineUserMsg
+type LinebotContext struct {
+	Bot    *linebot.Client
+	Events []*linebot.Event
 }
 
 type LineUserMsg struct {
@@ -34,19 +34,27 @@ func NewLineBotClient() (*linebot.Client, error) {
 	return bot, nil
 }
 
-func GetLineMsg(events []*linebot.Event) (*LineUserMsg, error) {
+func ParseLinebotRequest(r *http.Request, bot *linebot.Client) ([]*linebot.Event, error) {
+	events, err := bot.ParseRequest(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse request: %v", err)
+	}
+	return events, nil
+}
+
+func GetLineUserMsg(events []*linebot.Event) (LineUserMsg, error) {
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			// メッセージがテキスト型の場合
 			if msg, ok := event.Message.(*linebot.TextMessage); ok {
-				return &LineUserMsg{
+				return LineUserMsg{
 					UserID: event.Source.UserID,
 					Msg:    msg.Text,
 				}, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("no text message found in events")
+	return LineUserMsg{}, fmt.Errorf("no text message found in events")
 }
 
 func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) error {

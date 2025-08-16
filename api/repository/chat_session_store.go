@@ -18,7 +18,7 @@ type ChatSession struct {
 	Timestamp    time.Time
 }
 
-func (l *ChatSessionStore) Get(sessionID string) (*ChatSession, bool) {
+func (l *ChatSessionStore) GetChatSession(sessionID string) (*ChatSession, bool) {
 	value, found := l.store.Load(sessionID)
 	if !found {
 		return nil, false
@@ -32,10 +32,20 @@ func (l *ChatSessionStore) Get(sessionID string) (*ChatSession, bool) {
 	return &session, true
 }
 
-func (l *ChatSessionStore) Save(session ChatSession) {
+func (l *ChatSessionStore) UpsertChatSession(session ChatSession) {
 	l.store.Store(session.SessionID, session)
 }
 
-func (l *ChatSessionStore) Delete(sessionID string) {
+func (l *ChatSessionStore) DeleteChatSession(sessionID string) {
 	l.store.Delete(sessionID)
+}
+
+func (l *ChatSessionStore) InsertInitChatSession(sessionID string) {
+	session := ChatSession{
+		SessionID:    sessionID,
+		MenuCategory: "",
+		State:        entity.StateMenuCategorySelect,
+		Timestamp:    time.Now(),
+	}
+	l.UpsertChatSession(session)
 }

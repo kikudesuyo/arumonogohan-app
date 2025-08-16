@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
+	"github.com/kikudesuyo/arumonogohan-app/api/entity"
 	"google.golang.org/api/option"
 )
 
@@ -81,4 +82,37 @@ func (g *GeminiAI) generateContentFromPrompt(ctx context.Context, prompt string)
 		}
 	}
 	return sb.String(), nil
+}
+
+// formatRecipeForLine は、Recipe構造体をLINEメッセージ用の整形済み文字列に変換します。
+func formatRecipeForLine(recipe entity.RecipeInputResp) string {
+	// レシピが生成できなかった場合やエラーの場合は、サマリーメッセージのみを返す
+	if recipe.Title == "提案できません" || recipe.Title == "無効な入力です" || recipe.Title == "エラー" {
+		return recipe.Summary
+	}
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("今日のレシピは「%s」で決まり！\n\n", recipe.Title))
+
+	if len(recipe.Ingredients) > 0 {
+		builder.WriteString("【材料】\n")
+		for _, ingredient := range recipe.Ingredients {
+			builder.WriteString(fmt.Sprintf("- %s\n", ingredient))
+		}
+		builder.WriteString("\n")
+	}
+
+	if len(recipe.Instructions) > 0 {
+		builder.WriteString("【作り方】\n")
+		for i, instruction := range recipe.Instructions {
+			builder.WriteString(fmt.Sprintf("%d. %s\n", i+1, instruction))
+		}
+		builder.WriteString("\n")
+	}
+
+	if recipe.Summary != "" {
+		builder.WriteString(fmt.Sprintf("【ポイント】\n%s\n", recipe.Summary))
+	}
+
+	return builder.String()
 }
