@@ -11,4 +11,5 @@ type RecipeInputResp struct {
 	Ingredients  []string `json:"ingredients"`
 	Instructions []string `json:"instructions"`
 	Summary      string   `json:"summary,omitempty"`
+	IsTempered   bool     `json:"is_tempered"`
 }

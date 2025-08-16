@@ -14,10 +14,15 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		return entity.RecipeInputResp{}, fmt.Errorf("failed to create GeminiAI client: %v", err)
 	}
 
-	fmt.Println("---tempered---")
-	_, err = isPromptTempered(geminiAI, ctx, req)
+	isTempered, err := isPromptTempered(geminiAI, ctx, req)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("prompt tampering detected: %v", err)
+	}
+	fmt.Println("isTempered", isTempered)
+	if isTempered {
+		return entity.RecipeInputResp{
+			IsTempered: true,
+		}, nil
 	}
 
 	// AIRecipe の構造から自動でツールを生成
@@ -35,7 +40,7 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		req.Ingredients,
 	)
 
-	aiRecipe, err := infrastructure.GetJSONResp[entity.RecipeInputResp](geminiAI, ctx, prompt, tools)
+	aiRecipe, err := infrastructure.GetGeminiJSONResp[entity.RecipeInputResp](geminiAI, ctx, prompt, tools)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("AI generate failed: %v", err)
 	}

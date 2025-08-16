@@ -111,8 +111,8 @@ func MakeToolFromStruct[T any](name, desc string) Tool {
 	}
 }
 
-// GetJSONResp は Gemini の FunctionCall の Args を任意の構造体にマッピング
-func GetJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools []Tool) (T, error) {
+// GetGeminiJSONResp は Gemini の FunctionCall の Args を任意の構造体にマッピング
+func GetGeminiJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools []Tool) (T, error) {
 	modelCopy := *g.Model
 
 	var genaiTools []*genai.Tool
@@ -156,4 +156,21 @@ func GetJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools [
 		return *new(T), fmt.Errorf("failed to unmarshal json to struct: %v", err)
 	}
 	return result, nil
+}
+
+func GetGeminiStringResp(g *GeminiAI, ctx context.Context, prompt string) (string, error) {
+	resp, err := g.Model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", fmt.Errorf("error generating content: %v", err)
+	}
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no content returned from AI")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	textPart, ok := part.(genai.Text)
+	if !ok {
+		return "", fmt.Errorf("unexpected content type: %T", part)
+	}
+	return string(textPart), nil
 }
