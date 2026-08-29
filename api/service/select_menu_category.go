@@ -1,4 +1,4 @@
-package usecase
+package service
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, store *repository.ChatSessionStore) error {
+func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, store repository.ChatSessionRepository) error {
 	replyMsg := fmt.Sprintf("「%s」ですね✨️ \n次に使う食材を教えて下さい!👨‍🍳", lineUserMsg.Msg)
 	err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
 	if err != nil {
@@ -18,13 +18,12 @@ func ProcessSelectMenuCategory(bot *linebot.Client, events []*linebot.Event, lin
 	}
 
 	//状態更新
-	chatSession := &repository.ChatSession{
-		SessionID:    lineUserMsg.UserID,
+	chatSession := &entity.ChatSession{
+		UserID:       lineUserMsg.UserID,
 		MenuCategory: lineUserMsg.Msg,
 		State:        entity.StateIngredientInput,
 		Timestamp:    time.Now(),
 	}
-	store.UpsertChatSession(*chatSession)
-	return nil
+	return store.Save(chatSession)
 
 }

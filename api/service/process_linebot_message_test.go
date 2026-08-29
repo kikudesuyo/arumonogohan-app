@@ -1,9 +1,8 @@
-package usecase
+package service
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
 	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
@@ -11,12 +10,12 @@ import (
 )
 
 func TestProcessLinebotMessageReturnsErrorForUnknownState(t *testing.T) {
-	store := &repository.ChatSessionStore{}
-	store.UpsertChatSession(repository.ChatSession{
-		SessionID: "user-1",
-		State:     entity.ChatState("unknown"),
-		Timestamp: time.Now(),
-	})
+	store := repository.NewInMemoryChatSessionRepository()
+	session := entity.NewChatSession("user-1")
+	session.State = entity.ChatState("unknown")
+	if err := store.Save(session); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
 
 	err := ProcessLinebotMessage(
 		context.Background(),
