@@ -2,12 +2,44 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
 	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 )
+
+type trackingChatSessionRepository struct {
+	findCalled bool
+}
+
+func (r *trackingChatSessionRepository) Find(string) (*entity.ChatSession, error) {
+	r.findCalled = true
+	return nil, errors.New("Find should not be called for a menu category")
+}
+
+func (*trackingChatSessionRepository) Save(*entity.ChatSession) error { return nil }
+
+func (*trackingChatSessionRepository) Delete(string) error { return nil }
+
+func TestProcessLinebotMessageReturnsEarlyForMenuCategory(t *testing.T) {
+	store := &trackingChatSessionRepository{}
+
+	err := ProcessLinebotMessage(
+		context.Background(),
+		nil,
+		nil,
+		infrastructure.LineUserMsg{UserID: "user-1", Msg: "家庭の味🥢"},
+		store,
+	)
+	if err != nil {
+		t.Fatalf("ProcessLinebotMessage() error = %v, want nil", err)
+	}
+	if store.findCalled {
+		t.Fatal("ProcessLinebotMessage() called Find() for a menu category")
+	}
+}
 
 func TestProcessLinebotMessageReturnsErrorForUnknownState(t *testing.T) {
 	store := repository.NewInMemoryChatSessionRepository()
