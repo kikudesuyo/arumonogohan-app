@@ -1,12 +1,12 @@
-package usecase
+package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
 	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
+	"github.com/kikudesuyo/arumonogohan-app/api/xerror"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -16,13 +16,19 @@ func ProcessLinebotMessage(
 	bot *linebot.Client,
 	events []*linebot.Event,
 	lineUserMsg infrastructure.LineUserMsg,
-	store *repository.ChatSessionStore,
+	store repository.ChatSessionRepository,
 ) error {
-	chatSession, found := store.GetChatSession(lineUserMsg.UserID)
-	if !found {
-		store.InsertInitChatSession(lineUserMsg.UserID)
+	chatSession, err := store.Find(lineUserMsg.UserID)
+	if err != nil {
+		return err
+	}
+	if chatSession == nil {
+		chatSession = entity.NewChatSession(lineUserMsg.UserID)
 		if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
 			return ProcessSelectMenuCategory(bot, events, lineUserMsg, store)
+		}
+		if err := store.Save(chatSession); err != nil {
+			return err
 		}
 		return infrastructure.ReplyMsgToLine(bot, events, "メニューから料理するジャンルを選択ください🍽️")
 	}
@@ -37,6 +43,6 @@ func ProcessLinebotMessage(
 	case entity.StateIngredientInput:
 		return ProcessInputIngredient(ctx, bot, events, lineUserMsg, chatSession, store)
 	default:
-		return fmt.Errorf("unknown chat session state: %s", chatSession.State)
+		return xerror.InvalidChatState(chatSession.State)
 	}
 }

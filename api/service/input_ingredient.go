@@ -1,4 +1,4 @@
-package usecase
+package service
 
 import (
 	"context"
@@ -12,13 +12,15 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *repository.ChatSession, store *repository.ChatSessionStore) error {
+func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *entity.ChatSession, store repository.ChatSessionRepository) error {
 	// メニューカテゴリ再選択の場合
 	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
 		chatSession.MenuCategory = lineUserMsg.Msg
 		chatSession.State = entity.StateIngredientInput
 		chatSession.Timestamp = time.Now()
-		store.UpsertChatSession(*chatSession)
+		if err := store.Save(chatSession); err != nil {
+			return err
+		}
 
 		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", lineUserMsg.Msg)
 		err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
@@ -43,8 +45,7 @@ func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*
 	if err != nil {
 		return err
 	}
-	store.InsertInitChatSession(lineUserMsg.UserID)
-	return nil
+	return store.Delete(lineUserMsg.UserID)
 }
 
 // formatRecipeForLine は、Recipe構造体をLINEメッセージ用の整形済み文字列に変換します。

@@ -70,7 +70,7 @@ ngrok http 8081
 ```bash
 cd arumonogohan-app/
 go mod tidy
-go run cmd/main.go
+go run ./api
 ```
 
 ## 本番環境
