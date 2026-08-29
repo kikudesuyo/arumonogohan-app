@@ -31,7 +31,7 @@ func ProcessLinebotMessage(
 		if err := store.Save(chatSession); err != nil {
 			return err
 		}
-		return infrastructure.ReplyMsgToLine(bot, events, "メニューから料理するジャンルを選択ください🍽️")
+		return infrastructure.ReplyMsgToLine(bot, events, "あるものごはんへようこそ！\nメニューから料理するジャンルを選択してください🍽️")
 	}
 
 	switch chatSession.State {
