@@ -39,6 +39,16 @@
 
 ### ローカル開発
 
+#### Docker で起動
+
+Docker Compose を利用する場合は、`.env` を作成したあと、以下を実行します。
+
+```bash
+docker compose up --build
+```
+
+API は `http://localhost:8081` で起動します。ポートを変更する場合は `.env` の `PORT` を変更してください。
+
 #### .env ファイル作成
 
 ```
@@ -73,13 +83,38 @@ go mod tidy
 go run ./api
 ```
 
-## 本番環境
-
-GCP Cloud Run にデプロイ
+変更前に、format・lint・test・build・Docker イメージの検証を実行します。
 
 ```bash
-bash deploy_cloud_functions.sh
+make ci
 ```
+
+## 本番環境
+
+GCP Cloud Run へ、コンテナイメージを Artifact Registry 経由でデプロイします。
+
+### 前提条件
+
+- `gcloud` CLI のインストールとログイン
+- `arumonogohan-app` プロジェクトへのアクセス権
+- `.env` の作成と必須環境変数の設定
+
+### デプロイ
+
+GitHub Actions の `CI/CD` ワークフローが、テスト・ビルド後に Artifact Registry への Push と Cloud Run へのデプロイを実行します。ローカルから本番環境へ直接デプロイする運用は行いません。
+
+```bash
+git push origin main
+```
+
+デプロイは `main` への Push を契機に実行されます。ワークフローでは Workload Identity Federation で認証し、以下を GitHub Actions の Variables / Secrets として設定してください。
+
+- Variables: `GCP_PROJECT_ID`, `GCP_REGION`, `CLOUD_RUN_SERVICE`, `ARTIFACT_REGISTRY_REPOSITORY`, `GEMINI_API_KEY_SECRET`, `LINE_CHANNEL_SECRET_SECRET`, `LINE_CHANNEL_TOKEN_SECRET`
+- Secrets: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`
+
+`GEMINI_API_KEY`、`LINE_BOT_CHANNEL_SECRET`、`LINE_BOT_CHANNEL_TOKEN` は Cloud Secret Manager に保存し、デプロイ時に Cloud Run へ参照設定します。
+
+デプロイ完了後に表示された Cloud Run URL に `/callback` を付けた URL を、LINE Developers の Webhook URL に設定してください。
 
 ### 備考
 
@@ -87,7 +122,7 @@ bash deploy_cloud_functions.sh
 
 ```text
 1. .env に新しい変数を追加
-1. deploy_cloud_functions.sh にて登録した変数の追加
+1. Makefile と `.github/workflows/ci-cd.yml` の環境変数設定を更新
 ```
 
 ## 技術スタック
