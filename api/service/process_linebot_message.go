@@ -18,23 +18,20 @@ func ProcessLinebotMessage(
 	lineUserMsg infrastructure.LineUserMsg,
 	store repository.ChatSessionRepository,
 ) error {
+	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
+		return ProcessSelectMenuCategory(bot, events, lineUserMsg, store)
+	}
+
 	chatSession, err := store.Find(lineUserMsg.UserID)
 	if err != nil {
 		return err
 	}
 	if chatSession == nil {
 		chatSession = entity.NewChatSession(lineUserMsg.UserID)
-		if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
-			return ProcessSelectMenuCategory(bot, events, lineUserMsg, store)
-		}
 		if err := store.Save(chatSession); err != nil {
 			return err
 		}
 		return infrastructure.ReplyMsgToLine(bot, events, "あるものごはんへようこそ！\nメニューから料理するジャンルを選択してください🍽️")
-	}
-
-	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
-		return ProcessSelectMenuCategory(bot, events, lineUserMsg, store)
 	}
 
 	switch chatSession.State {
