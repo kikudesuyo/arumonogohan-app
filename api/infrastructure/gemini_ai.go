@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
+	"google.golang.org/genai"
 )
 
-// Tool は Gemini Tool 情報をラップ
 type Tool struct {
 	Name        string
 	Description string
 	Parameters  ToolParameter
 }
 
-// ToolParameter は JSON Schema 用
 type ToolParameter map[string]Property
 
 type Property struct {
@@ -27,150 +25,130 @@ type Property struct {
 	Items       *Property `json:"items,omitempty"`
 }
 
-// GeminiAI は Gemini 用クライアント
 type GeminiAI struct {
 	Client *genai.Client
-	Model  *genai.GenerativeModel
+	Model  string
 }
 
-var GeminiModel = "gemini-1.5-flash"
+const GeminiModel = "gemini-2.5-flash"
 
-// NewGeminiAI は Gemini クライアントを生成
 func NewGeminiAI(ctx context.Context) (*GeminiAI, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
 	}
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  apiKey,
+		Backend: genai.BackendGeminiAPI,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("GeminiAI client creation failed: %v", err)
+		return nil, fmt.Errorf("GeminiAI client creation failed: %w", err)
 	}
-	model := client.GenerativeModel(GeminiModel)
-	return &GeminiAI{Client: client, Model: model}, nil
+	return &GeminiAI{Client: client, Model: GeminiModel}, nil
 }
 
 func convertToGenaiSchema(params ToolParameter) map[string]*genai.Schema {
-	schema := make(map[string]*genai.Schema)
-	for k, v := range params {
-		var genaiType genai.Type
-		switch v.Type {
-		case "string":
-			genaiType = genai.TypeString
-		case "array":
-			genaiType = genai.TypeArray
-		case "object":
-			genaiType = genai.TypeObject
-		}
-		s := &genai.Schema{Type: genaiType, Description: v.Description}
-
-		if v.Items != nil {
-			var itemGenaiType genai.Type
-			switch v.Items.Type {
-			case "string":
-				itemGenaiType = genai.TypeString
-			case "integer":
-				itemGenaiType = genai.TypeInteger
-			case "number":
-				itemGenaiType = genai.TypeNumber
-			case "boolean":
-				itemGenaiType = genai.TypeBoolean
-			}
-			s.Items = &genai.Schema{Type: itemGenaiType}
-		}
-		schema[k] = s
+	schema := make(map[string]*genai.Schema, len(params))
+	for name, property := range params {
+		schema[name] = propertySchema(property)
 	}
 	return schema
 }
 
-// StructToToolParams は任意の構造体 T から ToolParameter を生成
+func propertySchema(property Property) *genai.Schema {
+	schema := &genai.Schema{Type: genaiType(property.Type), Description: property.Description}
+	if property.Items != nil {
+		schema.Items = propertySchema(*property.Items)
+	}
+	return schema
+}
+
+func genaiType(kind string) genai.Type {
+	switch kind {
+	case "string":
+		return genai.TypeString
+	case "integer":
+		return genai.TypeInteger
+	case "number", "float64", "float32":
+		return genai.TypeNumber
+	case "boolean":
+		return genai.TypeBoolean
+	case "array", "slice":
+		return genai.TypeArray
+	case "object", "struct":
+		return genai.TypeObject
+	default:
+		return genai.TypeString
+	}
+}
+
 func StructToToolParams[T any]() ToolParameter {
 	t := reflect.TypeOf((*T)(nil)).Elem()
 	params := ToolParameter{}
 	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		typ := f.Type.Kind().String()
-		prop := Property{
-			Type:        typ,
-			Description: f.Tag.Get("json"), // json tag を説明として使う例
+		field := t.Field(i)
+		jsonName := strings.Split(field.Tag.Get("json"), ",")[0]
+		if jsonName == "-" {
+			continue
 		}
-		if f.Type.Kind() == reflect.Slice {
-			prop.Type = "array"
-			prop.Items = &Property{Type: f.Type.Elem().Kind().String()}
+		if jsonName == "" {
+			jsonName = field.Name
 		}
-		params[f.Name] = prop
+		property := Property{Type: field.Type.Kind().String(), Description: field.Name}
+		if field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array {
+			property.Type = "array"
+			property.Items = &Property{Type: field.Type.Elem().Kind().String()}
+		}
+		params[jsonName] = property
 	}
 	return params
 }
 
-// MakeToolFromStruct は構造体 T から Tool を生成
 func MakeToolFromStruct[T any](name, desc string) Tool {
-	return Tool{
-		Name:        name,
-		Description: desc,
-		Parameters:  StructToToolParams[T](),
-	}
+	return Tool{Name: name, Description: desc, Parameters: StructToToolParams[T]()}
 }
 
-// GetGeminiJSONResp は Gemini の FunctionCall の Args を任意の構造体にマッピング
 func GetGeminiJSONResp[T any](g *GeminiAI, ctx context.Context, prompt string, tools []Tool) (T, error) {
-	modelCopy := *g.Model
-
-	var genaiTools []*genai.Tool
-	for _, t := range tools {
-		genaiTools = append(genaiTools, &genai.Tool{
-			FunctionDeclarations: []*genai.FunctionDeclaration{
-				{
-					Name:        t.Name,
-					Description: t.Description,
-					Parameters: &genai.Schema{
-						Type:       genai.TypeObject,
-						Properties: convertToGenaiSchema(t.Parameters),
-					},
-				},
+	genaiTools := make([]*genai.Tool, 0, len(tools))
+	for _, tool := range tools {
+		genaiTools = append(genaiTools, &genai.Tool{FunctionDeclarations: []*genai.FunctionDeclaration{{
+			Name:        tool.Name,
+			Description: tool.Description,
+			Parameters: &genai.Schema{
+				Type:       genai.TypeObject,
+				Properties: convertToGenaiSchema(tool.Parameters),
 			},
-		})
+		}}})
 	}
-	modelCopy.Tools = genaiTools
 
-	resp, err := modelCopy.GenerateContent(ctx, genai.Text(prompt))
+	resp, err := g.Client.Models.GenerateContent(ctx, g.Model, genai.Text(prompt), &genai.GenerateContentConfig{Tools: genaiTools})
 	if err != nil {
-		return *new(T), fmt.Errorf("error generating content: %v", err)
+		return *new(T), fmt.Errorf("error generating content: %w", err)
+	}
+	functionCalls := resp.FunctionCalls()
+	if len(functionCalls) == 0 {
+		return *new(T), fmt.Errorf("no function call returned from AI")
 	}
 
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return *new(T), fmt.Errorf("no content returned from AI")
-	}
-
-	fc, ok := resp.Candidates[0].Content.Parts[0].(genai.FunctionCall)
-	if !ok {
-		return *new(T), fmt.Errorf("unexpected content type: %T", resp.Candidates[0].Content.Parts[0])
-	}
-
-	jsonBytes, err := json.Marshal(fc.Args)
+	jsonBytes, err := json.Marshal(functionCalls[0].Args)
 	if err != nil {
-		return *new(T), fmt.Errorf("failed to marshal function call args: %v", err)
+		return *new(T), fmt.Errorf("failed to marshal function call args: %w", err)
 	}
-
 	var result T
 	if err := json.Unmarshal(jsonBytes, &result); err != nil {
-		return *new(T), fmt.Errorf("failed to unmarshal json to struct: %v", err)
+		return *new(T), fmt.Errorf("failed to unmarshal json to struct: %w", err)
 	}
 	return result, nil
 }
 
 func GetGeminiStringResp(g *GeminiAI, ctx context.Context, prompt string) (string, error) {
-	resp, err := g.Model.GenerateContent(ctx, genai.Text(prompt))
+	resp, err := g.Client.Models.GenerateContent(ctx, g.Model, genai.Text(prompt), nil)
 	if err != nil {
-		return "", fmt.Errorf("error generating content: %v", err)
+		return "", fmt.Errorf("error generating content: %w", err)
 	}
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("no content returned from AI")
+	text := strings.TrimSpace(resp.Text())
+	if text == "" {
+		return "", fmt.Errorf("no text returned from AI")
 	}
-
-	part := resp.Candidates[0].Content.Parts[0]
-	textPart, ok := part.(genai.Text)
-	if !ok {
-		return "", fmt.Errorf("unexpected content type: %T", part)
-	}
-	return string(textPart), nil
+	return text, nil
 }
