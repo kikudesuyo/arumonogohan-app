@@ -30,7 +30,7 @@ type GeminiAI struct {
 	Model  string
 }
 
-const GeminiModel = "gemini-2.5-flash"
+const GeminiModel = "gemini-3.5-flash-lite"
 
 func NewGeminiAI(ctx context.Context) (*GeminiAI, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
