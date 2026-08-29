@@ -1,17 +1,10 @@
 package gcp
 
 import (
-	"net/http"
-
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/gin-gonic/gin"
-	"github.com/kikudesuyo/arumonogohan-app/api/handler"
+	v1 "github.com/kikudesuyo/arumonogohan-app/api/handler/v1"
 )
 
 func init() {
-	functions.HTTP("LinbotCallback", func(w http.ResponseWriter, req *http.Request) {
-		r := gin.Default()
-		r.POST("/callback", handler.HandleLinebotCallback)
-		r.ServeHTTP(w, req)
-	})
+	functions.HTTP("LinebotCallback", v1.HandleLinebotCallback)
 }
