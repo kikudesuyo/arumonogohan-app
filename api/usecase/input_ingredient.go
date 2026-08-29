@@ -12,7 +12,7 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *repository.ChatSession, store *repository.ChatSessionStore) error {
+func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *repository.ChatSession, store *repository.ChatSessionStore) error {
 	// メニューカテゴリ再選択の場合
 	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
 		chatSession.MenuCategory = lineUserMsg.Msg
@@ -32,7 +32,6 @@ func ProcessInputIngredient(bot *linebot.Client, events []*linebot.Event, lineUs
 		MenuCategory: chatSession.MenuCategory,
 		Ingredients:  lineUserMsg.Msg,
 	}
-	ctx := context.Background()
 	recipe, err := SuggestRecipe(ctx, recipeInput)
 	if err != nil {
 		return err

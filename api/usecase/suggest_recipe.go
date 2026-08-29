@@ -13,24 +13,20 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("failed to create GeminiAI client: %v", err)
 	}
-
 	isTempered, err := isPromptTempered(geminiAI, ctx, req)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("prompt tampering detected: %v", err)
 	}
-	fmt.Println("isTempered", isTempered)
 	if isTempered {
 		return entity.RecipeInputResp{
 			IsTempered: true,
 		}, nil
 	}
 
-	// AIRecipe の構造から自動でツールを生成
 	tools := []infrastructure.Tool{
 		infrastructure.MakeToolFromStruct[entity.RecipeInputResp]("submit_recipe", "ユーザーに提案するレシピを送信する"),
 	}
 
-	// プロンプトを作成
 	prompt := fmt.Sprintf(
 		`ユーザーが提供した食材を使って、創造的で美味しいレシピを一つ提案してください。
 		食材が不十分でレシピが作れない場合は、その旨をsummaryフィールドで伝えてください。
