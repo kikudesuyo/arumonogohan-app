@@ -23,6 +23,7 @@ jobs:
         with:
           go-version-file: api/go.mod
           cache: true
+          cache-dependency-path: api/go.sum
       - name: Format check
         working-directory: api
         run: make format-check

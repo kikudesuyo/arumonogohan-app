@@ -33,6 +33,7 @@ jobs:
         with:
           go-version-file: api/go.mod
           cache: true
+          cache-dependency-path: api/go.sum
       - name: Test and build Go API
         working-directory: api
         run: make test build
