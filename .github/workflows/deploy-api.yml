@@ -1,48 +1,23 @@
-name: CI/CD
+name: Deploy API
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: ci-cd-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: production-api-deploy
+  cancel-in-progress: false
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
-  quality:
-    name: Quality Gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-      - name: Format check
-        run: make format-check
-      - name: Vet
-        run: make lint
-      - name: Test
-        run: go test -race ./...
-      - name: Build
-        run: make build
-      - name: Docker build
-        run: make docker-build
-
   deploy:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    needs: quality
+    name: Deploy Go API to Cloud Run
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
@@ -54,9 +29,18 @@ jobs:
       LINE_CHANNEL_TOKEN_SECRET: ${{ vars.LINE_CHANNEL_TOKEN_SECRET }}
     steps:
       - uses: actions/checkout@v4
-      - uses: google-github-actions/auth@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test and build Go API
+        run: make test build
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
-      - run: make deploy
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Deploy to Cloud Run
+        run: make deploy

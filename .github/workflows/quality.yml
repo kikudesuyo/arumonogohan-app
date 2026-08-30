@@ -1,0 +1,35 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: Check Go API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Format check
+        run: make format-check
+      - name: Vet
+        run: make lint
+      - name: Test
+        run: go test -race ./...
+      - name: Build
+        run: make build
+      - name: Docker build
+        run: make docker-build
