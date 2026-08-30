@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 )
 
@@ -30,7 +29,7 @@ func TestProcessLinebotMessageReturnsEarlyForMenuCategory(t *testing.T) {
 		context.Background(),
 		nil,
 		nil,
-		infrastructure.LineUserMsg{UserID: "user-1", Msg: "家庭の味🥢"},
+		repository.LineUserMsg{UserID: "user-1", Msg: "家庭の味🥢"},
 		store,
 	)
 	if err != nil {
@@ -53,7 +52,7 @@ func TestProcessLinebotMessageReturnsErrorForUnknownState(t *testing.T) {
 		context.Background(),
 		nil,
 		nil,
-		infrastructure.LineUserMsg{UserID: "user-1", Msg: "材料"},
+		repository.LineUserMsg{UserID: "user-1", Msg: "材料"},
 		store,
 	)
 	if err == nil {

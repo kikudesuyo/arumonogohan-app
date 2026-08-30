@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
+	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 )
 
 func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.RecipeInputResp, error) {
-	geminiAI, err := infrastructure.NewGeminiAI(ctx)
+	geminiAI, err := repository.NewGeminiAI(ctx)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("failed to create GeminiAI client: %v", err)
 	}
@@ -23,8 +23,8 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		}, nil
 	}
 
-	tools := []infrastructure.Tool{
-		infrastructure.MakeToolFromStruct[entity.RecipeInputResp]("submit_recipe", "ユーザーに提案するレシピを送信する"),
+	tools := []repository.Tool{
+		repository.MakeToolFromStruct[entity.RecipeInputResp]("submit_recipe", "ユーザーに提案するレシピを送信する"),
 	}
 
 	prompt := fmt.Sprintf(
@@ -36,7 +36,7 @@ func SuggestRecipe(ctx context.Context, req entity.RecipeInputReq) (entity.Recip
 		req.Ingredients,
 	)
 
-	aiRecipe, err := infrastructure.GetGeminiJSONResp[entity.RecipeInputResp](geminiAI, ctx, prompt, tools)
+	aiRecipe, err := repository.GetGeminiJSONResp[entity.RecipeInputResp](geminiAI, ctx, prompt, tools)
 	if err != nil {
 		return entity.RecipeInputResp{}, fmt.Errorf("AI generate failed: %v", err)
 	}

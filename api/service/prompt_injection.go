@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
+	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 )
 
-func isPromptTempered(g *infrastructure.GeminiAI, ctx context.Context, data any) (bool, error) {
+func isPromptTempered(g *repository.GeminiAI, ctx context.Context, data any) (bool, error) {
 	tamperingPrompt := fmt.Sprintf(`
 	判定対象メッセージ:
 	%v
@@ -16,7 +16,7 @@ func isPromptTempered(g *infrastructure.GeminiAI, ctx context.Context, data any)
 	必ず YES または NO のみ。
 `, data)
 
-	resp, err := infrastructure.GetGeminiStringResp(g, ctx, tamperingPrompt)
+	resp, err := repository.GetGeminiStringResp(g, ctx, tamperingPrompt)
 	if err != nil {
 		return false, fmt.Errorf("error generating tampering content: %v", err)
 	}

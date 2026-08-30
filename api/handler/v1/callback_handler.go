@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 	"github.com/kikudesuyo/arumonogohan-app/api/service"
 )
@@ -18,17 +17,17 @@ func HandleLinebotCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	linebot, err := infrastructure.NewLineBotClient()
+	linebot, err := repository.NewLineBotClient()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	events, err := infrastructure.ParseLinebotRequest(r, linebot)
+	events, err := repository.ParseLinebotRequest(r, linebot)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	lineUserMsg, err := infrastructure.GetLineUserMsg(events)
+	lineUserMsg, err := repository.GetLineUserMsg(events)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

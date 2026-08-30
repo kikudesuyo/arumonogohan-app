@@ -2,25 +2,42 @@ name: CI/CD
 
 on:
   pull_request:
+    branches: [main]
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
   quality:
+    name: Quality Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: make ci
+          cache: true
+      - name: Format check
+        run: make format-check
+      - name: Vet
+        run: make lint
+      - name: Test
+        run: go test -race ./...
+      - name: Build
+        run: make build
+      - name: Docker build
+        run: make docker-build
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     needs: quality
     runs-on: ubuntu-latest
     permissions:
@@ -31,6 +48,7 @@ jobs:
       REGION: ${{ vars.GCP_REGION }}
       SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
       REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+      RUNTIME_SERVICE_ACCOUNT: ${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}
       GEMINI_API_KEY_SECRET: ${{ vars.GEMINI_API_KEY_SECRET }}
       LINE_CHANNEL_SECRET_SECRET: ${{ vars.LINE_CHANNEL_SECRET_SECRET }}
       LINE_CHANNEL_TOKEN_SECRET: ${{ vars.LINE_CHANNEL_TOKEN_SECRET }}

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 	"github.com/kikudesuyo/arumonogohan-app/api/xerror"
 	"github.com/line/line-bot-sdk-go/linebot"
@@ -15,7 +14,7 @@ func ProcessLinebotMessage(
 	ctx context.Context,
 	bot *linebot.Client,
 	events []*linebot.Event,
-	lineUserMsg infrastructure.LineUserMsg,
+	lineUserMsg repository.LineUserMsg,
 	store repository.ChatSessionRepository,
 ) error {
 	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
@@ -31,7 +30,7 @@ func ProcessLinebotMessage(
 		if err := store.Save(chatSession); err != nil {
 			return err
 		}
-		return infrastructure.ReplyMsgToLine(bot, events, "あるものごはんへようこそ！\nメニューから料理するジャンルを選択してください🍽️")
+		return repository.ReplyMsgToLine(bot, events, "あるものごはんへようこそ！\nメニューから料理するジャンルを選択してください🍽️")
 	}
 
 	switch chatSession.State {
