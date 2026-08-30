@@ -36,9 +36,18 @@ ci: format-check lint test build docker-build
 
 # deploy is intended to run from the CI workflow after Workload Identity Federation auth.
 deploy:
-	gcloud builds submit \
+	BUILD_ID=$$(gcloud builds submit \
 		--project="$(PROJECT_ID)" \
 		--config=_cloudbuild.all.yaml \
+		--async \
 		--suppress-logs \
+		--format="value(id)" \
 		--substitutions=_COMMIT_SHA="$(COMMIT_SHA)",_REGION="$(REGION)",_SERVICE="$(SERVICE)",_RUNTIME_SERVICE_ACCOUNT="$(RUNTIME_SERVICE_ACCOUNT)",_GEMINI_PROJECT_ID="$(GEMINI_PROJECT_ID)",_GEMINI_API_KEY_SECRET="$(GEMINI_API_KEY_SECRET)",_LINE_CHANNEL_SECRET_SECRET="$(LINE_CHANNEL_SECRET_SECRET)",_LINE_CHANNEL_TOKEN_SECRET="$(LINE_CHANNEL_TOKEN_SECRET)" \
-		.
+		.) && \
+	echo "Cloud Build started: $$BUILD_ID" && \
+	while true; do \
+		STATUS=$$(gcloud builds describe "$$BUILD_ID" --project="$(PROJECT_ID)" --format="value(status)"); \
+		echo "Cloud Build status: $$STATUS"; \
+		case "$$STATUS" in SUCCESS) exit 0;; FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED) exit 1;; esac; \
+		sleep 5; \
+	done
