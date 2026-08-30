@@ -3,6 +3,7 @@ package entity
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 )
 
 type RecipeInputReq struct {
@@ -37,18 +38,8 @@ func (r *RecipeInputResp) UnmarshalJSON(data []byte) error {
 	if len(bytes.TrimSpace(raw.IsTempered)) > 0 {
 		if err := json.Unmarshal(raw.IsTempered, &tempered); err != nil {
 			var value string
-			if string(raw.IsTempered) != "null" {
-				if stringErr := json.Unmarshal(raw.IsTempered, &value); stringErr != nil {
-					return err
-				}
-				switch value {
-				case "true", "TRUE", "True":
-					tempered = true
-				case "false", "FALSE", "False", "":
-					tempered = false
-				default:
-					return err
-				}
+			if json.Unmarshal(raw.IsTempered, &value) == nil {
+				tempered = strings.EqualFold(strings.TrimSpace(value), "true")
 			}
 		}
 	}
