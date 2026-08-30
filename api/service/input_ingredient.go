@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/kikudesuyo/arumonogohan-app/api/entity"
-	"github.com/kikudesuyo/arumonogohan-app/api/infrastructure"
 	"github.com/kikudesuyo/arumonogohan-app/api/repository"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*linebot.Event, lineUserMsg infrastructure.LineUserMsg, chatSession *entity.ChatSession, store repository.ChatSessionRepository) error {
+func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*linebot.Event, lineUserMsg repository.LineUserMsg, chatSession *entity.ChatSession, store repository.ChatSessionRepository) error {
 	// メニューカテゴリ再選択の場合
 	if entity.IsMenuCategorySelected(lineUserMsg.Msg) {
 		chatSession.MenuCategory = lineUserMsg.Msg
@@ -23,7 +22,7 @@ func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*
 		}
 
 		replyMsg := fmt.Sprintf("「%s」ですね✨️ 使う食材を教えて下さい!!", lineUserMsg.Msg)
-		err := infrastructure.ReplyMsgToLine(bot, events, replyMsg)
+		err := repository.ReplyMsgToLine(bot, events, replyMsg)
 		if err != nil {
 			return err
 		}
@@ -41,7 +40,7 @@ func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*
 
 	// Recipe構造体をLINE用の文字列にフォーマットする
 	replyMsg := formatRecipeForLine(recipe)
-	err = infrastructure.ReplyMsgToLine(bot, events, replyMsg)
+	err = repository.ReplyMsgToLine(bot, events, replyMsg)
 	if err != nil {
 		return err
 	}
