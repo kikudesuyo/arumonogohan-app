@@ -78,15 +78,15 @@ ngrok http 8081
 ### 実行
 
 ```bash
-cd arumonogohan-app/
+cd arumonogohan-app/api
 go mod tidy
-go run ./api
+go run .
 ```
 
 変更前に、format・lint・test・build・Docker イメージの検証を実行します。
 
 ```bash
-make ci
+cd api && make ci
 ```
 
 ## 本番環境

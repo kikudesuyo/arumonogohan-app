@@ -24,12 +24,17 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Format check
+        working-directory: api
         run: make format-check
       - name: Vet
+        working-directory: api
         run: make lint
       - name: Test
+        working-directory: api
         run: go test -race ./...
       - name: Build
+        working-directory: api
         run: make build
       - name: Docker build
+        working-directory: api
         run: make docker-build
