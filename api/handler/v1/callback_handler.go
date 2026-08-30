@@ -29,7 +29,10 @@ func HandleLinebotCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	lineUserMsg, err := repository.GetLineUserMsg(events)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		// LINE's webhook verification and non-text events are valid requests,
+		// but there is no message to process or reply to.
+		log.Printf("linebot callback skipped: %v", err)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if err := service.ProcessLinebotMessage(r.Context(), linebot, events, lineUserMsg, chatSessions); err != nil {
