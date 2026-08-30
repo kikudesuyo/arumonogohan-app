@@ -1,0 +1,64 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$_COMMIT_SHA
+      - -t
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$_COMMIT_SHA
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:latest
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$_COMMIT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --port
+      - "8080"
+      - --cpu
+      - "1"
+      - --memory
+      - 256Mi
+      - --min-instances
+      - "0"
+      - --max-instances
+      - "1"
+      - --service-account
+      - ${_RUNTIME_SERVICE_ACCOUNT}
+      - --update-env-vars
+      - GEMINI_PROJECT_ID=${_GEMINI_PROJECT_ID}
+      - --set-secrets
+      - GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}:latest,LINE_BOT_CHANNEL_SECRET=${_LINE_CHANNEL_SECRET_SECRET}:latest,LINE_BOT_CHANNEL_TOKEN=${_LINE_CHANNEL_TOKEN_SECRET}:latest
+
+images:
+  - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$_COMMIT_SHA
+  - asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:latest
+
+substitutions:
+  _COMMIT_SHA: latest
+  _REPOSITORY: arumonogohan
+  _SERVICE: arumonogohan-api
+  _REGION: asia-northeast1
+  _RUNTIME_SERVICE_ACCOUNT: arumonogohan-runtime@arumonogohan-app.iam.gserviceaccount.com
+  _GEMINI_PROJECT_ID: arumonogohan-app
+  _GEMINI_API_KEY_SECRET: GEMINI_API_KEY
+  _LINE_CHANNEL_SECRET_SECRET: LINE_BOT_CHANNEL_SECRET
+  _LINE_CHANNEL_TOKEN_SECRET: LINE_BOT_CHANNEL_TOKEN
