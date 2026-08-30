@@ -19,14 +19,14 @@ jobs:
     name: Deploy Go API to Cloud Run
     runs-on: ubuntu-latest
     env:
-      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      REGION: ${{ vars.GCP_REGION }}
-      SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
-      REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
-      RUNTIME_SERVICE_ACCOUNT: ${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}
-      GEMINI_API_KEY_SECRET: ${{ vars.GEMINI_API_KEY_SECRET }}
-      LINE_CHANNEL_SECRET_SECRET: ${{ vars.LINE_CHANNEL_SECRET_SECRET }}
-      LINE_CHANNEL_TOKEN_SECRET: ${{ vars.LINE_CHANNEL_TOKEN_SECRET }}
+      PROJECT_ID: arumonogohan-app
+      REGION: asia-northeast1
+      SERVICE: arumonogohan-api
+      REPOSITORY: arumonogohan
+      RUNTIME_SERVICE_ACCOUNT: arumonogohan-runtime@arumonogohan-app.iam.gserviceaccount.com
+      GEMINI_API_KEY_SECRET: GEMINI_API_KEY
+      LINE_CHANNEL_SECRET_SECRET: LINE_BOT_CHANNEL_SECRET
+      LINE_CHANNEL_TOKEN_SECRET: LINE_BOT_CHANNEL_TOKEN
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -38,8 +38,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          workload_identity_provider: projects/455901512974/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions-deployer@arumonogohan-app.iam.gserviceaccount.com
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       - name: Deploy to Cloud Run

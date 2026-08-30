@@ -9,9 +9,9 @@ IMAGE := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/$(REPOSITORY)/$(SERVICE):$(IMAGE
 RUNTIME_SERVICE_ACCOUNT ?= arumonogohan-runtime@$(PROJECT_ID).iam.gserviceaccount.com
 
 GEMINI_PROJECT_ID ?= $(PROJECT_ID)
-GEMINI_API_KEY_SECRET ?= gemini-api-key
-LINE_CHANNEL_SECRET_SECRET ?= line-bot-channel-secret
-LINE_CHANNEL_TOKEN_SECRET ?= line-bot-channel-token
+GEMINI_API_KEY_SECRET ?= GEMINI_API_KEY
+LINE_CHANNEL_SECRET_SECRET ?= LINE_BOT_CHANNEL_SECRET
+LINE_CHANNEL_TOKEN_SECRET ?= LINE_BOT_CHANNEL_TOKEN
 
 .PHONY: format format-check lint test build docker-build ci image deploy
 

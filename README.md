@@ -107,13 +107,13 @@ GitHub Actions の `CI/CD` ワークフローが、テスト・ビルド後に A
 git push origin main
 ```
 
-デプロイは `main` への Push を契機に実行されます。ワークフローでは Workload Identity Federation で認証し、以下を GitHub Actions の Variables / Secrets として設定してください。
+デプロイは `main` への Push を契機に実行されます。ワークフローには機密でない GCP / WIF の識別子を直接記述し、Workload Identity Federation で認証します。
 
-- Variables: `GCP_PROJECT_ID`, `GCP_REGION`, `CLOUD_RUN_SERVICE`, `ARTIFACT_REGISTRY_REPOSITORY`, `CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`, `GEMINI_API_KEY_SECRET`, `LINE_CHANNEL_SECRET_SECRET`, `LINE_CHANNEL_TOKEN_SECRET`
+- 固定設定: `GCP_PROJECT_ID=arumonogohan-app`, `GCP_REGION=asia-northeast1`, `CLOUD_RUN_SERVICE=arumonogohan-api`, `ARTIFACT_REGISTRY_REPOSITORY=arumonogohan`
 
-`GEMINI_API_KEY`、`LINE_BOT_CHANNEL_SECRET`、`LINE_BOT_CHANNEL_TOKEN` は Cloud Secret Manager に保存し、デプロイ時に Cloud Run へ参照設定します。
+`GEMINI_API_KEY`、`LINE_BOT_CHANNEL_SECRET`、`LINE_BOT_CHANNEL_TOKEN` という名前の Secret を Cloud Secret Manager に保存し、デプロイ時に Cloud Run へ参照設定します。
 
-`CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT` には Cloud Run 実行用サービスアカウントを設定し、3つの Secret に `roles/secretmanager.secretAccessor` を付与してください。GitHub Actions のデプロイ用サービスアカウントと、Cloud Run の実行用サービスアカウントは分離します。WIF のプロバイダ ID とサービスアカウント ID は GitHub Variables に設定し、API キーなどの機密値は GitHub に保存せず GCP Secret Manager で管理します。
+`arumonogohan-runtime@arumonogohan-app.iam.gserviceaccount.com` には、3つの Secret に `roles/secretmanager.secretAccessor` を付与してください。GitHub Actions のデプロイ用サービスアカウントと、Cloud Run の実行用サービスアカウントは分離します。API キーなどの機密値は GitHub に保存せず GCP Secret Manager で管理します。
 
 デプロイ完了後に表示された Cloud Run URL に `/callback` を付けた URL を、LINE Developers の Webhook URL に設定してください。
 
