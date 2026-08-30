@@ -1,4 +1,4 @@
-module github.com/kikudesuyo/arumonogohan-app
+module github.com/kikudesuyo/arumonogohan-app/api
 
 go 1.24
 

@@ -34,6 +34,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Test and build Go API
+        working-directory: api
         run: make test build
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -43,4 +44,5 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       - name: Deploy to Cloud Run
+        working-directory: api
         run: make deploy
