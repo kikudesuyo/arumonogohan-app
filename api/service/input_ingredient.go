@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -32,6 +33,9 @@ func ProcessInputIngredient(ctx context.Context, bot *linebot.Client, events []*
 	recipeInput := entity.RecipeInputReq{
 		MenuCategory: chatSession.MenuCategory,
 		Ingredients:  lineUserMsg.Msg,
+	}
+	if err := repository.PushMsgToLine(bot, lineUserMsg.UserID, "レシピを考え中です…🍳\n少しだけお待ちください！"); err != nil {
+		log.Printf("failed to send progress message: %v", err)
 	}
 	recipe, err := SuggestRecipe(ctx, recipeInput)
 	if err != nil {

@@ -71,3 +71,10 @@ func ReplyMsgToLine(bot *linebot.Client, events []*linebot.Event, msg string) er
 	}
 	return nil
 }
+
+func PushMsgToLine(bot *linebot.Client, userID, msg string) error {
+	if _, err := bot.PushMessage(userID, linebot.NewTextMessage(msg)).Do(); err != nil {
+		return fmt.Errorf("error pushing message: %v", err)
+	}
+	return nil
+}
