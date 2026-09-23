@@ -55,7 +55,7 @@ API は `http://localhost:8081` で起動します。ポートを変更する場
 cp -p .env.example .env
 ```
 
-`GEMINI_` については開発者の Google アカウントで発効してください
+`GEMINI_API_KEY` については開発者の Google アカウントで発行してください
 `LINE_BOT_` については、個別で渡します。
 
 #### localhost を外部公開
