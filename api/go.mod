@@ -1,6 +1,6 @@
 module github.com/kikudesuyo/arumonogohan-app/api
 
-go 1.24
+go 1.27
 
 require (
 	github.com/go-chi/chi/v5 v5.3.1
